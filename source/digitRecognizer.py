@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import matplotlib as plt
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.svm import SVC
@@ -15,9 +16,15 @@ if __name__ == '__main__':
     print "Splitting data into train/test sets..."
     X_train, X_test, y_train, y_test = train_test_split(df.drop(target, axis=1), df[target], test_size=0.2, random_state=1)
 
-    pca = PCA(n_components=3)
-    pca_transform = pca.fit_transform(X_train)
-    var_values = pca.explained_variance_ratio_
+    from sklearn.preprocessing import StandardScaler
+
+    ss = StandardScaler()
+    X_trainS = ss.fit_transform(X_train)
+
+    pca = PCA(n_components=300)
+    X_trainPC = pca.fit_transform(X_trainS)
+    print "Variance explained by PCA :"
+    print pca.explained_variance_ratio_.sum()
 
     print "Setting up GridSearchCV..."
     svc_param = [{'kernel': ['linear', 'rbf', 'sigmoid']
@@ -31,7 +38,7 @@ if __name__ == '__main__':
 
     clf = GridSearchCV(estimator=SVC(cache_size=8000, decision_function_shape='ovr', random_state=1), n_jobs=3, cv=5, param_grid=svc_param)
     print "Fitting model..."
-    clf.fit(X_train, y_train)
+    clf.fit(X_trainPC, y_train)
 
     print "CV Results: "
     print clf.cv_results_
@@ -41,7 +48,10 @@ if __name__ == '__main__':
     print clf.best_score_
 
     print "Predicting on test set..."
-    y_pred = clf.predict(X_test)
+    X_testS = ss.tranform(X_test)
+    X_testPC = pca.transform(X_testS)
+
+    y_pred = clf.predict(X_testPC)
 
     print("Classification report for model %s:\n%s\n"
           % (clf, classification_report(y_test, y_pred)))
