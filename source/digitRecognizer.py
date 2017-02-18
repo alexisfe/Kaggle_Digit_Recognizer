@@ -11,25 +11,27 @@ if __name__ == '__main__':
     df = pd.read_csv('../input/train.csv')
     eval_df = pd.read_csv('../input/test.csv')
 
-    target = 'label'
+    label_colname = 'label'
+    id_colname = 'id'
 
     print "Splitting data into train/test sets..."
-    X_train, X_test, y_train, y_test = train_test_split(df.drop(target, axis=1), df[target], test_size=0.2, random_state=1)
+    X_train, X_test, y_train, y_test = train_test_split(df.drop(label_colname, axis=1), df[label_colname], test_size=0.2, random_state=1)
 
     from sklearn.preprocessing import StandardScaler
 
     ss = StandardScaler()
     X_trainS = ss.fit_transform(X_train)
 
-    pca = PCA(n_components=300)
+    pca = PCA(n_components=250)
     X_trainPC = pca.fit_transform(X_trainS)
     print "Variance explained by PCA :"
     print pca.explained_variance_ratio_.sum()
 
     print "Setting up GridSearchCV..."
-    svc_param = [{'kernel': ['linear', 'rbf', 'sigmoid']
-                     , 'gamma': [1e-3, 1e-4, 1e-5]
-                     , 'C': np.arange(1000, 10000, 1000)}]
+    svc_param = [{
+        # 'kernel': ['linear', 'rbf', 'sigmoid'],
+        'gamma': [1e-3, 1e-4, 1e-5],
+        'C': np.arange(1000, 10000, 1000)}]
 
     nn_param = [{'alpha': [1e-2, 1e-3, 1e-4]
                     , 'momentum': np.arange(0.3, 0.6, 0.05)
@@ -48,7 +50,7 @@ if __name__ == '__main__':
     print clf.best_score_
 
     print "Predicting on test set..."
-    X_testS = ss.tranform(X_test)
+    X_testS = ss.transform(X_test)
     X_testPC = pca.transform(X_testS)
 
     y_pred = clf.predict(X_testPC)
@@ -58,6 +60,8 @@ if __name__ == '__main__':
     print("Confusion matrix:\n%s" % confusion_matrix(y_test, y_pred))
 
     print "Creating kaggle submission file..."
-    predictions = clf.predict(eval_df.drop(target, axis=1))
+    evalS = ss.transform(eval_df)
+    X_testPC = pca.transform(X_testS)
+    predictions = clf.predict(eval_df)
     submission = pd.DataFrame({"id": eval_df['id'], 'type': predictions})
     submission.to_csv("output/digitRecognizerSubmission.csv", index=False)
